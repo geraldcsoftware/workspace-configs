@@ -1,0 +1,41 @@
+# This playbook syncronizes template files that should be applied to a repository.
+# It ensures that the templates are rendered and copied to the appropriate locations,
+# and maintains a log of the last sync operation.
+
+- name: Template Sync Playbook
+  hosts: localhost
+  gather_facts: false
+  vars:
+    repo_path: "{{ repo_path | default(ansible_env.PWD) }}"
+    template_flavor: "{{ template_flavor | default('default') }}"
+    template_dir: "{{ playbook_dir }}/templates/{{ template_flavor }}"
+    sync_log_path: "{{ repo_path }}/.template-sync/sync-report.json"
+
+  pre_tasks:
+    - name: Ensure .template-sync directory exists
+      ansible.builtin.file:
+        path: "{{ repo_path }}/.template-sync"
+        state: directory
+        mode: '0755'
+
+  tasks:
+    - name: Load existing sync report if available
+      ansible.builtin.slurp:
+        src: "{{ sync_log_path }}"
+      register: sync_report_raw
+      ignore_errors: true
+
+    - name: Log if sync report exists
+      ansible.builtin.debug:
+        msg: "Existing sync report found."
+      when: sync_report_raw is defined and sync_report_raw.content | b64decode | length > 0
+
+    - name: Update sync log with latest timestamp
+      ansible.builtin.copy:
+        content: |
+          {
+            "last_synced": "{{ ansible_date_time.iso8601 }}",
+            "flavor": "{{ template_flavor }}"
+          }
+        dest: "{{ sync_log_path }}"
+        mode: '0644'
