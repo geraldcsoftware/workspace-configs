@@ -10,31 +10,44 @@
     template_dir: "{{ playbook_dir }}/templates/{{ template_flavor }}"
     sync_log_path: "{{ repo_path }}/.template-sync/sync-report.json"
 
-  pre_tasks:
-    - name: Ensure .template-sync directory exists
+  tasks:
+    - name: Ensure github directory exists
       ansible.builtin.file:
-        path: "{{ repo_path }}/.template-sync"
+        path: "{{ repo_path }}/.github"
         state: directory
         mode: '0755'
 
-  tasks:
-    - name: Load existing sync report if available
-      ansible.builtin.slurp:
-        src: "{{ sync_log_path }}"
-      register: sync_report_raw
-      ignore_errors: true
+    - name: Check if copilot instructions file exists
+      ansible.builtin.stat:
+        path: "{{ repo_path }}/.github/copilot-instructions.md"
+      register: copilot_instructions
 
-    - name: Log if sync report exists
-      ansible.builtin.debug:
-        msg: "Existing sync report found."
-      when: sync_report_raw is defined and sync_report_raw.content | b64decode | length > 0
-
-    - name: Update sync log with latest timestamp
-      ansible.builtin.copy:
-        content: |
-          {
-            "last_synced": "{{ ansible_date_time.iso8601 }}",
-            "flavor": "{{ template_flavor }}"
-          }
-        dest: "{{ sync_log_path }}"
+    - name: Copy copilot instructions file if it does not exist
+      ansible.builtin.template:
+        src: copilot-instructions.md.j2
+        dest: "{{ repo_path }}/.github/copilot-instructions.md"
         mode: '0644'
+      when: not copilot_instructions.stat.exists
+
+    - name: Check if .vscode/mcp.json file exists
+      ansible.builtin.stat:
+        path: "{{ repo_path }}/.vscode/mcp.json"
+      register: mcp_json
+
+    - name: Copy .vscode/mcp.json file if it does not exist
+      ansible.builtin.template:
+        src: mcp.json.j2
+        dest: "{{ repo_path }}/.vscode/mcp.json"
+        mode: '0644'
+      when: not mcp_json.stat.exists
+
+    - name: Check if .vscode/workspace-sync.json exists
+      ansible.builtin.stat:
+        path: "{{ repo_path }}/.vscode/workspace-sync.json"
+      register: workspace_sync_json
+    - name: Create .vscode/workspace-sync.json if it does not exist
+      ansible.builtin.copy:
+        content: "{}"
+        dest: "{{ repo_path }}/.vscode/workspace-sync.json"
+        mode: '0644'
+      when: not workspace_sync_json.stat.exists
