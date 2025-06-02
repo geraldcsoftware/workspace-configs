@@ -4,7 +4,6 @@
 
 - name: Template Sync Playbook
   hosts: localhost
-  gather_facts: false
   vars:
     repo_path: "{{ repo_path | default(ansible_env.PWD) }}"
     template_flavor: "{{ template_flavor | default('default') }}"
