@@ -40,14 +40,3 @@
         dest: "{{ repo_path }}/.vscode/mcp.json"
         mode: '0644'
       when: not mcp_json.stat.exists
-
-    - name: Check if .vscode/workspace-sync.json exists
-      ansible.builtin.stat:
-        path: "{{ repo_path }}/.vscode/workspace-sync.json"
-      register: workspace_sync_json
-    - name: Create .vscode/workspace-sync.json if it does not exist
-      ansible.builtin.copy:
-        content: "{}"
-        dest: "{{ repo_path }}/.vscode/workspace-sync.json"
-        mode: '0644'
-      when: not workspace_sync_json.stat.exists
