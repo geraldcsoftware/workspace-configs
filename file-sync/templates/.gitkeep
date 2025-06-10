@@ -1,0 +1,3 @@
+# Directory structure for diversified templates
+# Each subdirectory under templates/ is for a specific environment
+# Each contains its own copilot-instructions.md.j2 and mcp.json.j2

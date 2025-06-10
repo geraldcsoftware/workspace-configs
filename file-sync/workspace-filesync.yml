@@ -6,8 +6,25 @@
   hosts: localhost
   vars:
     repo_path: "{{ repo_path | default(ansible_env.PWD) }}"
-    template_flavor: "{{ template_flavor | default('default') }}"
-    template_dir: "{{ playbook_dir }}/templates/{{ template_flavor }}"
+    # Determine environment flavor
+    java_files: "{{ lookup('ansible.builtin.fileglob', repo_path + '/pom.xml', errors='ignore') }}"
+    node_files: "{{ lookup('ansible.builtin.fileglob', repo_path + '/package.json', errors='ignore') }}"
+    dotnet_files: "{{ lookup('ansible.builtin.fileglob', repo_path + '/*.sln', errors='ignore') + lookup('ansible.builtin.fileglob', repo_path + '/*.csproj', errors='ignore') }}"
+    ansible_files: "{{ lookup('ansible.builtin.fileglob', repo_path + '/ansible.cfg', errors='ignore') }}"
+    ts_files: "{{ lookup('ansible.builtin.fileglob', repo_path + '/package.json', errors='ignore') }}"
+    # Add more as needed
+    template_flavor: |
+      {% if java_files %}java
+      {% elif ansible_files %}ansible
+      {% elif dotnet_files %}dotnet
+      {% elif node_files %}
+        {% set pkg = lookup('file', repo_path + '/package.json') | from_json %}
+        {% if 'typescript' in (pkg.get('devDependencies', {}) | list + pkg.get('dependencies', {}) | list) %}typescript
+        {% else %}nodejs
+        {% endif %}
+      {% else %}default
+      {% endif %}
+    template_dir: "{{ playbook_dir }}/templates/{{ template_flavor | trim }}"
     sync_log_path: "{{ repo_path }}/.template-sync/sync-report.json"
 
   tasks:
@@ -24,7 +41,7 @@
 
     - name: Copy copilot instructions file if it does not exist
       ansible.builtin.template:
-        src: copilot-instructions.md.j2
+        src: "{{ template_dir }}/copilot-instructions.md.j2"
         dest: "{{ repo_path }}/.github/copilot-instructions.md"
         mode: '0644'
       when: not copilot_instructions.stat.exists
@@ -36,7 +53,7 @@
 
     - name: Copy .vscode/mcp.json file if it does not exist
       ansible.builtin.template:
-        src: mcp.json.j2
+        src: "{{ template_dir }}/mcp.json.j2"
         dest: "{{ repo_path }}/.vscode/mcp.json"
         mode: '0644'
       when: not mcp_json.stat.exists

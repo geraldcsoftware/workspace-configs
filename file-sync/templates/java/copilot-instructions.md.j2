@@ -1,0 +1,51 @@
+# Coding Instructions
+
+Follow these steps for each coding interaction:
+
+## 1. Project Identification:
+   - **Known Project Facts:**
+     - **Technology Stack:**
+       - Java Spring application
+       - Java version: Check `.java-version` file for current version
+       - Database: PostgreSQL
+     - **Build Tool:** Maven (check `pom.xml` for dependencies and plugins)
+   - If you have not identified other relevant project details, scan the pom.xml file for dependencies and the README.md file for additional context.
+   - Always ask relavant questions where context is missing or unclear
+
+## 2. Code Context Retrieval:
+   - Always begin your coding assistance by saying only "Remembering..." and retrieve all relevant information from your knowledge graph
+   - Always refer to your knowledge graph as your "memory" of the codebase
+
+## 3. Code Memory Categories:
+   - While working on code, be attentive to any new information that falls into these categories:
+     
+     a) **Architecture & Design** (system architecture, design patterns, data flow, component structure, module organization)
+
+     b) **Coding Standards** (style conventions, naming patterns, code organization preferences, linting rules, formatting standards)
+
+     c) **Features & Functionality** (implemented features, planned features, deprecated functionality, feature flags, API endpoints)
+
+     d) **Dependencies & Integrations** (libraries, frameworks, external services, databases, third-party APIs)
+
+     e) **Development Practices** (testing approach, deployment process, branching strategy, code review practices, documentation standards)
+
+     f) **Performance & Constraints** (performance requirements, known bottlenecks, optimization strategies, resource limitations)
+
+     g) **Technical Debt & Issues** (known bugs, code smells, refactoring needs, security concerns, maintenance tasks)
+
+## 4. Code Memory Update:
+   - If any new information was gathered during the coding interaction, update your memory as follows:
+     
+     a) **Create entities** for recurring components, modules, classes, functions, and significant architectural elements
+     
+     b) **Connect them** to existing entities using relations (dependencies, inheritance, composition, data flow, etc.)
+     
+     c) **Store facts** about them as observations (purpose, implementation details, usage patterns, constraints, etc.)
+     
+     d) **Track decisions** made during development (why certain approaches were chosen, alternatives considered, trade-offs made)
+
+## 5. Context Continuity:
+   - When resuming work on previously seen code, reference relevant architectural decisions and established patterns
+   - Maintain consistency with existing coding style and conventions
+   - Consider the broader system impact of suggested changes
+   - Highlight potential conflicts with established technical decisions or constraints

@@ -1,0 +1,34 @@
+{
+    "servers": {
+        "sequentialthinking": {
+            "command": "docker",
+            "args": [
+                "run",
+                "--rm",
+                "-i",
+                "mcp/sequentialthinking"
+            ]
+        },
+        "gitlab": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-gitlab"
+            ],
+            "env": {
+                "GITLAB_PERSONAL_ACCESS_TOKEN": "${env:GITLAB_TOKEN}",
+                "GITLAB_API_URL": "${env:GITLAB_URL}/api/v4"
+            }
+        },
+        "memory": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-memory"
+            ],
+            "env": {
+                "MEMORY_FILE_PATH": "${workspaceFolder}/.mcp/memory.json"
+            }
+        }
+    }
+}
