@@ -1,6 +1,16 @@
 # This playbook syncronizes template files that should be applied to a repository.
 # It ensures that the templates are rendered and copied to the appropriate locations,
 # and maintains a log of the last sync operation.
+#
+# Environment detection logic:
+#   - java:     pom.xml
+#   - nodejs:   package.json (and no typescript dependency)
+#   - typescript: package.json (with typescript dependency)
+#   - dotnet:   *.sln or *.csproj
+#   - ansible:  ansible.cfg
+#   - default:  fallback if none detected
+#
+# To add a new environment, add a new subdirectory under templates/ and extend the detection logic here.
 
 - name: Template Sync Playbook
   hosts: localhost
