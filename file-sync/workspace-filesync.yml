@@ -38,15 +38,6 @@
     sync_log_path: "{{ repo_path }}/.template-sync/sync-report.json"
 
   tasks:
-    - name: Ensure all destination directories exist
-      ansible.builtin.file:
-        path: "{{ repo_path }}/{{ item.value | dirname }}"
-        state: directory
-        mode: '0755'
-      loop: "{{ template_config | dict2items }}"
-      loop_control:
-        label: "{{ item.value }}"
-
     - name: Read template config file
       ansible.builtin.slurp:
         src: "{{ template_dir }}/config.yml"
@@ -55,6 +46,15 @@
     - name: Parse template config
       set_fact:
         template_config: "{{ template_config_raw['content'] | b64decode | from_yaml }}"
+
+    - name: Ensure all destination directories exist
+      ansible.builtin.file:
+        path: "{{ repo_path }}/{{ item.value | dirname }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ template_config | dict2items }}"
+      loop_control:
+        label: "{{ item.value }}"
 
     - name: Check if destination file exists
       ansible.builtin.stat:
