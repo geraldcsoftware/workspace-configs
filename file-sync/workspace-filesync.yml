@@ -67,10 +67,12 @@
     - name: Copy/render template files as per config if destination does not exist
       ansible.builtin.template:
         src: >-
-          {{ (template_dir + '/' + item.0.key) if (lookup('ansible.builtin.fileglob', template_dir + '/' + item.0.key, errors='ignore')) else (playbook_dir + '/templates/' + item.0.key) }}
-        dest: "{{ repo_path }}/{{ item.0.value }}"
+          {{ (template_dir + '/' + item[0].key) if (lookup('ansible.builtin.fileglob', template_dir + '/' + item[0].key, errors='ignore')) else (playbook_dir + '/templates/' + item[0].key) }}
+        dest: "{{ repo_path }}/{{ item[0].value }}"
         mode: '0644'
-      loop: "{{ lookup('ansible.builtin.zip', template_config | dict2items, dest_file_stats.results) }}"
-      when: not item.1.stat.exists
+      with_together:
+        - "{{ template_config | dict2items }}"
+        - "{{ dest_file_stats.results }}"
+      when: not item[1].stat.exists
       loop_control:
-        label: "{{ item.0.key }} -> {{ item.0.value }} (if not exists)"
+        label: "{{ item[0].key }} -> {{ item[0].value }} (if not exists)"
