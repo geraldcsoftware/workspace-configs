@@ -38,32 +38,39 @@
     sync_log_path: "{{ repo_path }}/.template-sync/sync-report.json"
 
   tasks:
-    - name: Ensure github directory exists
+    - name: Ensure all destination directories exist
       ansible.builtin.file:
-        path: "{{ repo_path }}/.github"
+        path: "{{ repo_path }}/{{ item.value | dirname }}"
         state: directory
         mode: '0755'
+      loop: "{{ template_config | dict2items }}"
+      loop_control:
+        label: "{{ item.value }}"
 
-    - name: Check if copilot instructions file exists
+    - name: Read template config file
+      ansible.builtin.slurp:
+        src: "{{ template_dir }}/config.yml"
+      register: template_config_raw
+
+    - name: Parse template config
+      set_fact:
+        template_config: "{{ template_config_raw['content'] | b64decode | from_yaml }}"
+
+    - name: Check if destination file exists
       ansible.builtin.stat:
-        path: "{{ repo_path }}/.github/copilot-instructions.md"
-      register: copilot_instructions
+        path: "{{ repo_path }}/{{ item.value }}"
+      loop: "{{ template_config | dict2items }}"
+      register: dest_file_stats
+      loop_control:
+        label: "{{ item.value }}"
 
-    - name: Copy copilot instructions file if it does not exist
+    - name: Copy/render template files as per config if destination does not exist
       ansible.builtin.template:
-        src: "{{ template_dir }}/copilot-instructions.md.j2"
-        dest: "{{ repo_path }}/.github/copilot-instructions.md"
+        src: >-
+          {{ (template_dir + '/' + item.0.key) if (lookup('ansible.builtin.fileglob', template_dir + '/' + item.0.key, errors='ignore')) else (playbook_dir + '/templates/' + item.0.key) }}
+        dest: "{{ repo_path }}/{{ item.0.value }}"
         mode: '0644'
-      when: not copilot_instructions.stat.exists
-
-    - name: Check if .vscode/mcp.json file exists
-      ansible.builtin.stat:
-        path: "{{ repo_path }}/.vscode/mcp.json"
-      register: mcp_json
-
-    - name: Copy .vscode/mcp.json file if it does not exist
-      ansible.builtin.template:
-        src: "{{ template_dir }}/mcp.json.j2"
-        dest: "{{ repo_path }}/.vscode/mcp.json"
-        mode: '0644'
-      when: not mcp_json.stat.exists
+      loop: "{{ zip(template_config | dict2items, dest_file_stats.results) | list }}"
+      when: not item.1.stat.exists
+      loop_control:
+        label: "{{ item.0.key }} -> {{ item.0.value }} (if not exists)"

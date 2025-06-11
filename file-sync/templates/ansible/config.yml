@@ -1,0 +1,2 @@
+copilot-instructions.md.j2: .github/copilot-instructions.md
+mcp.json.j2: .vscode/mcp.json
