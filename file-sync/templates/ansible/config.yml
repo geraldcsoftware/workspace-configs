@@ -1,2 +1,3 @@
 copilot-instructions.md.j2: .github/copilot-instructions.md
-mcp.json.j2: .vscode/mcp.json
+default/mcp.json.j2: .vscode/mcp.json
+default/memory.json.j2: .mcp/memory.json
