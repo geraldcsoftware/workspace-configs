@@ -1,2 +1,493 @@
-# Ansible Copilot Instructions
-Use Ansible best practices, YAML linting, and ensure idempotency in all playbooks.
+# GitHub Copilot Instructions for Ansible Projects
+
+## Playbook Documentation Standards
+
+### Playbook Headers
+- Every playbook must start with a descriptive title explaining the change or issue being addressed
+- Use a brief title in the format "what & why", e.g. "Upgrade of vintegration-postilion service to v1.2.3 to apply fix for issue with broken connections"
+- Include relevant metadata (author, date, ticket references if applicable) and example execution command
+
+Example:
+```yaml
+---
+# Deployment of User Authentication Service v2.1.3 to address login timeout issues
+# Author: [Your Name]
+# Date: {{ ansible_date_time.date }}
+# Ticket: JIRA-1234
+# Execution: `ansible-playbook C-XXX-uat_deploy.yml --inventory hostsfile|hostname, -Kk --user $USER --ask-vault-pass`
+
+- name: "Deploy User Authentication Service - UAT Environment"
+  hosts: uat_servers
+  become: true
+  vars: # when we have a few simple vars
+    var1: value
+  vars_files: # when we have more complex vars
+    - vars/uat_vars.yml
+  roles:
+    - backup
+    - user_auth_service
+```
+
+## Project Structure Preferences
+
+### Role-Based Organization
+- **ALWAYS** organize related tasks into roles
+- Use roles to separate concerns and promote reusability
+- Common role structure for service deployments:
+  - `tasks/main.yml` - Main task orchestration
+  - `tasks/backup.yml` - Service backup tasks
+  - `tasks/install.yml` - Package installation tasks
+  - `tasks/configure.yml` - Configuration management tasks
+  - `tasks/database.yml` - Database operations
+  - `handlers/main.yml` - Service restart/reload handlers
+  - `templates/` - Jinja2 templates for config files
+  - `vars/main.yml` - Role-specific variables
+
+### Environment-Specific Playbooks
+- Maintain separate playbooks for UAT and Production environments
+- Use consistent naming: `uat_deploy.yml` and `PROD_DEPLOY.yml`. When ticket number is given, prefix names with ticket number, i.e. `C-12345_uat_deploy.yml` and `C-12345_PROD_DEPLOY.yml`
+- Production playbooks should reference vaulted variable files
+- UAT and Prod playbooks should have identical structure, differing only in variables and target hosts.
+- Playbooks are always in the directory `changes/<change-reference>_<2-3-word-description>/` where <change-reference> is the ticket number, e.g. C-12345. e.g. "changes/C-12345_update-authentication-service"
+
+Example structure:
+```
+changes/C-12345_update-authentication-service/
+├── C-12345-uat-deploy.yml
+├── C-12345-PROD-DEPLOY.yml
+├── vars/
+│   ├── uat_vars.yml
+│   └── prod_vars.yml (vaulted)
+└── roles/
+    └── service_name/
+        ├── tasks/
+        ├── templates/
+        ├── handlers/
+        └── vars/
+```
+
+## Core Principles
+
+### Idempotency (Repeatability)
+- **CRITICAL**: All tasks must be idempotent - safe to run multiple times without negative side effects
+- Use appropriate modules and parameters that support idempotent operations
+- Always use `state` parameter when available (present, absent, started, stopped, etc.)
+- Use `creates` parameter for command/shell tasks when applicable
+- Implement proper conditional logic with `when` statements to avoid unnecessary changes
+
+### Module Naming Convention
+- **ALWAYS** use Fully Qualified Collection Names (FQCN) for all modules
+- Examples:
+  - Use `ansible.builtin.apt` instead of `apt`
+  - Use `ansible.builtin.yum` instead of `yum`
+  - Use `ansible.builtin.systemd` instead of `systemd`
+  - Use `community.general.postgresql_query` instead of `postgresql_query`
+
+## Code Style and Formatting
+
+### YAML Structure
+- Use 2-space indentation consistently
+- Use proper YAML syntax with colons followed by spaces
+- Quote strings when they contain special characters or variables
+- Use literal block scalars (`|`) for multi-line strings
+- Use folded block scalars (`>`) for long single-line strings
+- Use `\` to break long single line strings which cant be broken with `|` or `>`
+
+### Task Structure
+```yaml
+- name: "Descriptive task name explaining what it does"
+  ansible.builtin.module_name:
+    parameter1: value1
+    parameter2: value2
+    state: present
+  when: condition_if_applicable
+  tags:
+    - tag1
+    - tag2
+```
+
+### Variable Usage
+- Use `{{ variable_name }}` syntax for variable substitution
+- Quote strings containing variables: `"{{ variable_name }}"`
+- Use `vars` section at playbook/role level for organization
+- Vars applicable to multiple roles can be placed at playbook level
+- Playbook vars should be used when there are only a few vars. When we have many vars, use vars_file instead.
+- Prefer `group_vars` and `host_vars` for inventory-specific variables
+
+## Best Practices
+
+### Task Naming
+- Use descriptive, action-oriented task names
+- Start with action verbs: "Install", "Configure", "Ensure", "Create", "Update"
+- Be specific about what the task accomplishes
+- Example: "Install Apache web server package" instead of "Install package"
+
+### Error Handling
+- Use `failed_when` to define custom failure conditions
+- Use `ignore_errors: true` sparingly and only when justified
+- Implement proper `block`/`rescue`/`always` constructs for complex error handling
+- Use `register` to capture task results for conditional logic
+
+### Conditional Logic
+- Use `when` statements for conditional task execution
+- Prefer ansible facts over shell commands for system information
+- Use `ansible_facts` instead of deprecated `ansible_*` variables
+- Examples:
+  - `when: ansible_facts['os_family'] == 'Debian'`
+  - `when: ansible_facts['service_mgr'] == 'systemd'`
+
+### Loops
+- Use `loop` to define task iteration 
+- Add `loop_control` to customize iteration logic, especially to define a custom label when the loop variable is a complex for display.
+
+### Package Management
+- Always specify package state explicitly (`state: present`, `state: latest`, `state: absent`)
+- Always use `only_upgrade: true`, unless a task is intentionally to downgrade a package
+- Use package manager specific modules when available
+- Group related packages in lists when possible
+- Use `update_cache: true` for apt/yum modules when installing packages
+
+### Deb installation
+- It is acceptable to use debs for UAT playbooks.
+- When using deb files, use the `ansible.builtin.command` module
+- Use the command `dpkg -i --force-confold debfile.deb`
+- Include a similar apt task to install the same package from apt repositories.
+- Add an `installation_type` var at playbook level, which should be `apt` or `deb`, and a comment emphasising this next to it
+- Add a `when` condition to both the command and apt tasks which checks the value of the `installation_type` var to enable only one of the two at a time. 
+
+### Service Management
+- Always use `ansible.builtin.systemd` for systemd services
+- Specify both `state` and `enabled` parameters
+- Use `daemon_reload: true` when service files have changed
+- Example:
+```yaml
+- name: "Ensure Apache service is running and enabled"
+  ansible.builtin.systemd:
+    name: apache2
+    state: started
+    enabled: true
+    daemon_reload: true
+```
+
+### File Operations
+- Use `ansible.builtin.file` for file/directory creation and permissions
+- Use `ansible.builtin.copy` for static files
+- Use `ansible.builtin.template` for dynamic content with variables
+- Always specify `owner`, `group`, and `mode` for security
+- When owner and group are not explicitly given, always use "vsuite" for both.
+- Use `backup: true` for configuration files when appropriate
+
+### Security Considerations
+- Never hardcode sensitive data in playbooks
+- Use `ansible-vault` for encrypting sensitive variables
+- Use `no_log: true` for tasks handling sensitive data
+- Validate file permissions and ownership explicitly
+- Use `become` and `become_user` appropriately
+
+## Workflow-Specific Patterns
+
+### Service Backup Before Changes
+- **ALWAYS** backup service files before making changes
+- Use timestamped backups for easy identification
+- Backup configuration files, not databases
+- Create backup directory structure if it doesn't exist
+
+```yaml
+- name: "Create backup directory"
+  ansible.builtin.file:
+    path: "/backup/{{ service_name }}/{{ ansible_date_time.epoch }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "Backup current service configuration"
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/backup/{{ service_name }}/{{ ansible_date_time.epoch }}/"
+    remote_src: true
+    backup: true
+  loop:
+    - /etc/{{ service_name }}/
+    - /opt/{{ service_name }}/config/
+  ignore_errors: true
+```
+
+### Package Installation Patterns
+
+#### Production Servers (APT)
+```yaml
+- name: "Install service packages on production servers"
+  ansible.builtin.apt:
+    name:
+      - "{{ service_name }}"
+      - "{{ service_name }}-plugins"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: 
+    - ansible_facts['os_family'] == 'Debian'
+    - environment_type == 'production'
+```
+
+#### Test Servers (DEB packages)
+```yaml
+- name: "Install service from DEB package on test servers"
+  ansible.builtin.apt:
+    deb: "/tmp/{{ service_name }}_{{ service_version }}.deb"
+    state: present
+  when: 
+    - ansible_facts['os_family'] == 'Debian'
+    - environment_type in ['uat', 'test', 'development']
+
+- name: "Copy DEB package to target server"
+  ansible.builtin.copy:
+    src: "files/{{ service_name }}_{{ service_version }}.deb"
+    dest: "/tmp/{{ service_name }}_{{ service_version }}.deb"
+    owner: root
+    group: root
+    mode: '0644'
+  when: environment_type in ['uat', 'test', 'development']
+```
+
+### Application Properties Management
+
+#### Using lineinfile for single property updates
+```yaml
+- name: "Update database connection timeout in properties file"
+  ansible.builtin.lineinfile:
+    path: /opt/{{ service_name }}/config/application.properties
+    regexp: '^database\.connection\.timeout='
+    line: 'database.connection.timeout={{ db_connection_timeout }}'
+    backup: true
+    create: true
+  notify: restart {{ service_name }}
+```
+
+#### Using blockinfile for multiple related properties
+```yaml
+- name: "Update database configuration block"
+  ansible.builtin.blockinfile:
+    path: /opt/{{ service_name }}/config/application.properties
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - Database Configuration"
+    block: |
+      database.host={{ db_host }}
+      database.port={{ db_port }}
+      database.name={{ db_name }}
+      database.username={{ db_username }}
+      database.password={{ db_password }}
+      database.pool.size={{ db_pool_size }}
+    backup: true
+  notify: restart {{ service_name }}
+```
+
+#### Using Jinja2 templates for complex configurations
+```yaml
+- name: "Generate application properties from template"
+  ansible.builtin.template:
+    src: application.properties.j2
+    dest: /opt/{{ service_name }}/config/application.properties
+    owner: "{{ service_user }}"
+    group: "{{ service_group }}"
+    mode: '0640'
+    backup: true
+  notify: restart {{ service_name }}
+```
+
+### PostgreSQL Database Operations
+```yaml
+- name: "Execute database migration script"
+  community.general.postgresql_query:
+    db: "{{ db_name }}"
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_admin_user }}"
+    login_password: "{{ db_admin_password }}"
+    query: |
+      UPDATE user_preferences 
+      SET session_timeout = %s 
+      WHERE environment = %s;
+    positional_args:
+      - "{{ session_timeout_minutes }}"
+      - "{{ environment_type }}"
+  register: db_update_result
+  when: run_db_migration | default(false)
+
+- name: "Verify database changes"
+  community.general.postgresql_query:
+    db: "{{ db_name }}"
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_readonly_user }}"
+    login_password: "{{ db_readonly_password }}"
+    query: "SELECT COUNT(*) as affected_rows FROM user_preferences WHERE session_timeout = %s"
+    positional_args:
+      - "{{ session_timeout_minutes }}"
+  register: verification_result
+  when: db_update_result is succeeded
+
+- name: "Display database operation results"
+  ansible.builtin.debug:
+    msg: "Database update affected {{ verification_result.query_result[0].affected_rows }} rows"
+  when: verification_result is defined
+```
+
+## Common Patterns
+
+### Environment-Specific Variable Management
+
+#### UAT Playbook Pattern
+```yaml
+---
+# Deployment of Payment Processing Service v1.2.0 to address transaction timeout issues
+- name: "Deploy Payment Service - UAT Environment"
+  hosts: uat_payment_servers
+  become: true
+  vars:
+    environment_type: uat
+    service_name: payment-processor
+    service_version: "1.2.0"
+  vars_files:
+    - vars/uat_vars.yml
+    - vars/common_vars.yml
+  
+  pre_tasks:
+    - name: "Verify UAT environment connectivity"
+      ansible.builtin.ping:
+  
+  roles:
+    - role: payment_processor
+      vars:
+        backup_enabled: true
+        run_db_migration: true
+  
+  post_tasks:
+    - name: "Verify service deployment"
+      ansible.builtin.uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ service_port }}/health"
+        method: GET
+        status_code: 200
+```
+
+#### Production Playbook Pattern
+```yaml
+---
+# Deployment of Payment Processing Service v1.2.0 to address transaction timeout issues
+- name: "Deploy Payment Service - Production Environment"
+  hosts: production_payment_servers
+  become: true
+  vars:
+    environment_type: production
+    service_name: payment-processor
+    service_version: "1.2.0"
+  vars_files:
+    - vars/prod_vars.yml  # This file should be encrypted with ansible-vault
+    - vars/common_vars.yml
+  
+  pre_tasks:
+    - name: "Verify production environment connectivity"
+      ansible.builtin.ping:
+    
+    - name: "Confirm production deployment"
+      ansible.builtin.pause:
+        prompt: "You are about to deploy to PRODUCTION. Type 'yes' to continue"
+      register: confirm_deploy
+      failed_when: confirm_deploy.user_input != 'yes'
+  
+  roles:
+    - role: payment_processor
+      vars:
+        backup_enabled: true
+        run_db_migration: false  # More conservative for production
+  
+  post_tasks:
+    - name: "Verify service deployment"
+      ansible.builtin.uri:
+        url: "https://{{ service_fqdn }}/health"
+        method: GET
+        status_code: 200
+        validate_certs: true
+```
+
+### Vault Usage for Production
+- Use `ansible-vault encrypt vars/prod_vars.yml` for production variables
+- Include sensitive data like database passwords, API keys, certificates
+- Use `--ask-vault-pass` or `--vault-password-file` when running production playbooks
+
+```yaml
+# vars/prod_vars.yml (encrypted)
+db_admin_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          66386439653...
+          
+db_readonly_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          33663936643...
+
+api_secret_key: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          63393632643...
+```
+
+## Task Organization in Roles
+
+### Main Task File Pattern
+```yaml
+# roles/service_name/tasks/main.yml
+---
+- name: "Include backup tasks"
+  ansible.builtin.include_tasks: backup.yml
+  when: backup_enabled | default(true)
+
+- name: "Include installation tasks"
+  ansible.builtin.include_tasks: install.yml
+  tags: install
+
+- name: "Include configuration tasks"
+  ansible.builtin.include_tasks: configure.yml
+  tags: configure
+
+- name: "Include database tasks"
+  ansible.builtin.include_tasks: database.yml
+  when: run_db_migration | default(false)
+  tags: database
+
+- name: "Verify service is running"
+  ansible.builtin.systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+  tags: verify
+```
+
+## Handlers
+- Use handlers for service restarts and configuration reloads
+- Name handlers clearly and consistently
+- Place handlers in separate `handlers/main.yml` file for roles
+- Use `listen` parameter for grouping related handlers
+
+```yaml
+handlers:
+  - name: "restart apache"
+    ansible.builtin.systemd:
+      name: apache2
+      state: restarted
+    listen: "restart web services"
+
+  - name: "reload nginx"
+    ansible.builtin.systemd:
+      name: nginx
+      state: reloaded
+    listen: "restart web services"
+```
+
+## Compliance Notes
+- Follow ansible-trunk extension linting rules
+- Use yamllint-compliant YAML formatting
+- Follow ansible-lint best practices
+- Ensure ansible-trunk formatting standards are met
+
+## Tags
+- Use meaningful tags for task categorization
+- Common tags: `install`, `configure`, `security`, `update`, `backup`
+- Use tags consistently across playbooks and roles
+
+Remember: Every task should be safe to run multiple times. When in doubt, add appropriate conditional checks or use modules that are inherently idempotent.
