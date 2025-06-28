@@ -13,8 +13,8 @@ Example:
 # Deployment of User Authentication Service v2.1.3 to address login timeout issues
 # Author: [Your Name]
 # Date: {{ ansible_date_time.date }}
-# Ticket: JIRA-1234
-# Execution: `ansible-playbook C-XXX-uat_deploy.yml --inventory hostsfile|hostname, -Kk --user $USER --ask-vault-pass`
+# Ticket: C-12345
+# Execution: `ansible-playbook C-12345-uat_deploy.yml --inventory hostsfile|hostname, -Kk --user $USER --ask-vault-pass`
 
 - name: "Deploy User Authentication Service - UAT Environment"
   hosts: uat_servers
@@ -23,9 +23,13 @@ Example:
     var1: value
   vars_files: # when we have more complex vars
     - vars/uat_vars.yml
-  roles:
+  roles: # for playbooks with a lot of steps which require logical grouping
     - backup
     - user_auth_service
+  tasks: # for a few simple straightforward steps
+    - name: Descriptive title for task 1
+      ansible.builtin.debug # use fully qualified module name
+        msg: lorem ipsum
 ```
 
 ## Project Structure Preferences
@@ -33,12 +37,10 @@ Example:
 ### Role-Based Organization
 - **ALWAYS** organize related tasks into roles
 - Use roles to separate concerns and promote reusability
-- Common role structure for service deployments:
-  - `tasks/main.yml` - Main task orchestration
-  - `tasks/backup.yml` - Service backup tasks
-  - `tasks/install.yml` - Package installation tasks
-  - `tasks/configure.yml` - Configuration management tasks
-  - `tasks/database.yml` - Database operations
+- Common structure for service deployments:
+  - `roles/<service-name>/tasks/main.yml` - Main task orchestration
+  - `roles/backup/tasks/main.yml` - Service backup tasks
+  - `roles/sql/tasks/main.yml` - Post service installation sql scripts
   - `handlers/main.yml` - Service restart/reload handlers
   - `templates/` - Jinja2 templates for config files
   - `vars/main.yml` - Role-specific variables
@@ -191,8 +193,20 @@ changes/C-12345_update-authentication-service/
 - Use timestamped backups for easy identification
 - Backup configuration files, not databases
 - Create backup directory structure if it doesn't exist
+- Create a `service_backups` var either in the main playbook, or in the backup role's vars.
+- List an array of services which need backup, with the service name and service path
+- Use `community.general.archive` to create a tar.gz archive of the serivce path, in the backup directory
+- Follow the sample below
 
 ```yaml
+## In the vars file
+service_backups:
+  - name: service1
+    path: /srv/path/to/service1
+  - name: service2
+    path: /srv/path/to/service2
+
+# In the tasks file
 - name: "Create backup directory"
   ansible.builtin.file:
     path: "/backup/{{ service_name }}/{{ ansible_date_time.epoch }}"
@@ -201,53 +215,29 @@ changes/C-12345_update-authentication-service/
     group: root
     mode: '0755'
 
-- name: "Backup current service configuration"
-  ansible.builtin.copy:
-    src: "{{ item }}"
-    dest: "/backup/{{ service_name }}/{{ ansible_date_time.epoch }}/"
+- name: "Backup current services"
+  community.general.archive:
+    path: "{{ item.path }}"
+    dest: "/backup/{{ service_name }}/{{ ansible_date_time.epoch }}/{{ item.name }}.tar.gz"
     remote_src: true
-    backup: true
-  loop:
-    - /etc/{{ service_name }}/
-    - /opt/{{ service_name }}/config/
+    mode: '0644'
+    owner: vsuite
+    group: vsuite
+  loop: "{{ service_backups }}"
+  loop_control:
+    label: {{ item.name }}
   ignore_errors: true
 ```
 
 ### Package Installation Patterns
 
-#### Production Servers (APT)
 ```yaml
-- name: "Install service packages on production servers"
+- name: "Install service1 package"
   ansible.builtin.apt:
-    name:
-      - "{{ service_name }}"
-      - "{{ service_name }}-plugins"
+    name: service1
     state: present
     update_cache: true
     cache_valid_time: 3600
-  when: 
-    - ansible_facts['os_family'] == 'Debian'
-    - environment_type == 'production'
-```
-
-#### Test Servers (DEB packages)
-```yaml
-- name: "Install service from DEB package on test servers"
-  ansible.builtin.apt:
-    deb: "/tmp/{{ service_name }}_{{ service_version }}.deb"
-    state: present
-  when: 
-    - ansible_facts['os_family'] == 'Debian'
-    - environment_type in ['uat', 'test', 'development']
-
-- name: "Copy DEB package to target server"
-  ansible.builtin.copy:
-    src: "files/{{ service_name }}_{{ service_version }}.deb"
-    dest: "/tmp/{{ service_name }}_{{ service_version }}.deb"
-    owner: root
-    group: root
-    mode: '0644'
-  when: environment_type in ['uat', 'test', 'development']
 ```
 
 ### Application Properties Management
@@ -256,7 +246,7 @@ changes/C-12345_update-authentication-service/
 ```yaml
 - name: "Update database connection timeout in properties file"
   ansible.builtin.lineinfile:
-    path: /opt/{{ service_name }}/config/application.properties
+    path: /srv/path/to/service/etc/application.properties
     regexp: '^database\.connection\.timeout='
     line: 'database.connection.timeout={{ db_connection_timeout }}'
     backup: true
@@ -268,7 +258,7 @@ changes/C-12345_update-authentication-service/
 ```yaml
 - name: "Update database configuration block"
   ansible.builtin.blockinfile:
-    path: /opt/{{ service_name }}/config/application.properties
+    path: /srv/path/to/service/etc/application.properties
     marker: "# {mark} ANSIBLE MANAGED BLOCK - Database Configuration"
     block: |
       database.host={{ db_host }}
@@ -286,9 +276,9 @@ changes/C-12345_update-authentication-service/
 - name: "Generate application properties from template"
   ansible.builtin.template:
     src: application.properties.j2
-    dest: /opt/{{ service_name }}/config/application.properties
-    owner: "{{ service_user }}"
-    group: "{{ service_group }}"
+    dest: /srv/path/to/service/etc/application.properties
+    owner: vsuite
+    group: vsuite
     mode: '0640'
     backup: true
   notify: restart {{ service_name }}
@@ -491,3 +481,11 @@ handlers:
 - Use tags consistently across playbooks and roles
 
 Remember: Every task should be safe to run multiple times. When in doubt, add appropriate conditional checks or use modules that are inherently idempotent.
+
+## Service patterns to infer
+
+All custom services managed through ansible playbooks follow a specific naming pattern.
+Service names always start with 'v', and follow the pattern `{module-name}-{component-name}`. E.g. `vintegration-postilion`, meaning 'vintegration' is the module name, 'postilion' is the component name.
+For all services which conform to this format, the service path is always `/srv/vsuite/{module-name}/{component-name}/`, e.g. "/srv/vsuite/vintegration/postilion/"
+Application configuration files and wrapper configs are always found in the `etc` directory under the service directory, e.g. "/srv/vsuite/vintegration/postilion/etc/application.properties"
+Remember this path notation for service backups, updating application properties and wrapper configurations.
