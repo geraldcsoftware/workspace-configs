@@ -1,51 +1,185 @@
-# Coding Instructions
+# Java Development Custom Instructions
 
-Follow these steps for each coding interaction:
+Follow these comprehensive guidelines for all Java development interactions:
 
-## 1. Project Identification:
-   - **Known Project Facts:**
-     - **Technology Stack:**
-       - Java Spring application
-       - Java version: Check `.java-version` file for current version
-       - Database: PostgreSQL
-     - **Build Tool:** Maven (check `pom.xml` for dependencies and plugins)
-   - If you have not identified other relevant project details, scan the pom.xml file for dependencies and the README.md file for additional context.
-   - Always ask relavant questions where context is missing or unclear
+## 1. Project Identification & Context Discovery:
 
-## 2. Code Context Retrieval:
-   - Always begin your coding assistance by saying only "Remembering..." and retrieve all relevant information from your knowledge graph
-   - Always refer to your knowledge graph as your "memory" of the codebase
+### **Core Technology Assessment:**
+- **Java Version Detection:** Check `.java-version` if present, or `pom.xml` for Java version (8, 11, 17, 21+)
+- **Framework Identification:** 
+  - Spring Framework (classic XML config, JavaConfig, or Spring Boot)
+  - Check for `@SpringBootApplication`, `ApplicationContext.xml`, or Spring Boot starters
+  - Identify Spring modules: Web MVC, WebFlux, Data JPA, Security, Cloud, etc.
+- **Build System:** Maven (`pom.xml`) or Gradle (`build.gradle`)
+- **Database Integration:** PostgreSQL, MySQL, Oracle, H2, MongoDB (check dependencies and application properties)
 
-## 3. Code Memory Categories:
-   - While working on code, be attentive to any new information that falls into these categories:
-     
-     a) **Architecture & Design** (system architecture, design patterns, data flow, component structure, module organization)
+### **Architectural Pattern Recognition:**
+- **Project Structure:** Standard Maven/Gradle layout, multi-module projects, microservices
+- **Design Patterns:** Identify MVC, Repository, Service Layer, Factory, Builder, Strategy patterns in use
+- **Configuration Style:** Properties files, YAML, environment variables, Spring Profiles
+- **Dependency Injection:** Constructor, setter, or field injection preferences
 
-     b) **Coding Standards** (style conventions, naming patterns, code organization preferences, linting rules, formatting standards)
+### **Essential File Scanning Priority:**
+1. `pom.xml` - Dependencies, plugins, Java version
+2. `application.properties` / `app.properties` - Configuration patterns
+3. `README.md` - Project overview, setup instructions, conventions
+4. Package structure under `src/main/java` - Architectural organization
+5. Test structure under `src/test/java` - Testing patterns
 
-     c) **Features & Functionality** (implemented features, planned features, deprecated functionality, feature flags, API endpoints)
+## 2. Java Version-Specific Considerations:
 
-     d) **Dependencies & Integrations** (libraries, frameworks, external services, databases, third-party APIs)
+### **Java 8 Projects:**
+- Prefer lambda expressions and Stream API where appropriate
+- Use `Optional` for null safety
+- Avoid newer language features (var, records, pattern matching)
+- Consider Apache Commons for utility functions
 
-     e) **Development Practices** (testing approach, deployment process, branching strategy, code review practices, documentation standards)
+### **Java 11+ Projects:**
+- Utilize `var` for local variable type inference where it improves readability
+- Use new String methods (`isBlank()`, `lines()`, `strip()`)
+- Consider HTTP Client API for REST calls
 
-     f) **Performance & Constraints** (performance requirements, known bottlenecks, optimization strategies, resource limitations)
+### **Java 17+ Projects:**
+- Leverage records for data classes and DTOs
+- Use sealed classes for restricted inheritance
+- Apply pattern matching with instanceof
+- Consider switch expressions for cleaner conditional logic
 
-     g) **Technical Debt & Issues** (known bugs, code smells, refactoring needs, security concerns, maintenance tasks)
+### **Java 21+ Projects:**
+- Use pattern matching in switch statements
+- Apply virtual threads for high-concurrency scenarios
+- Utilize string templates when available
 
-## 4. Code Memory Update:
-   - If any new information was gathered during the coding interaction, update your memory as follows:
-     
-     a) **Create entities** for recurring components, modules, classes, functions, and significant architectural elements
-     
-     b) **Connect them** to existing entities using relations (dependencies, inheritance, composition, data flow, etc.)
-     
-     c) **Store facts** about them as observations (purpose, implementation details, usage patterns, constraints, etc.)
-     
-     d) **Track decisions** made during development (why certain approaches were chosen, alternatives considered, trade-offs made)
+## 3. Spring Framework Best Practices:
 
-## 5. Context Continuity:
-   - When resuming work on previously seen code, reference relevant architectural decisions and established patterns
-   - Maintain consistency with existing coding style and conventions
-   - Consider the broader system impact of suggested changes
-   - Highlight potential conflicts with established technical decisions or constraints
+### **Spring Boot Applications:**
+- Follow auto-configuration principles
+- Use starter dependencies appropriately
+- Implement proper `@ConfigurationProperties` for complex configurations
+- Apply `@Profile` annotations for environment-specific beans
+- Use `@ConditionalOn*` annotations for conditional bean creation
+
+### **Spring Classic Applications:**
+- Maintain consistency with existing XML or JavaConfig approach
+- Ensure proper bean lifecycle management
+- Use appropriate scope annotations (`@Singleton`, `@Prototype`, etc.)
+
+### **Common Spring Patterns:**
+- **Service Layer:** `@Service` with business logic, proper transaction boundaries
+- **Repository Layer:** `@Repository` with data access, custom query methods
+- **Controller Layer:** `@RestController` or `@Controller` with proper HTTP mapping
+- **Configuration:** `@Configuration` classes with `@Bean` methods
+- **Validation:** Use Bean Validation annotations (`@Valid`, `@NotNull`, etc.)
+
+## 4. Code Memory Categories (Enhanced):
+
+### **a) Architecture & Design Patterns:**
+- Layered architecture (Controller → Service → Repository → Entity)
+- Microservice boundaries and inter-service communication
+- Event-driven patterns with Spring Events or message queues
+- CQRS implementation with separate read/write models
+- Hexagonal/Clean Architecture with proper dependency directions
+
+### **b) Coding Standards & Conventions:**
+- **Naming:** PascalCase for classes, camelCase for methods/fields, UPPER_SNAKE_CASE for constants
+- **Package Structure:** Domain-driven or layer-based organization
+- **Method Length:** Prefer small, focused methods (15-20 lines max)
+- **Class Responsibilities:** Single Responsibility Principle adherence
+- **Documentation:** JavaDoc for public APIs, inline comments for complex logic
+
+### **c) Spring-Specific Patterns:**
+- **Bean Definition:** Constructor injection preference over field injection
+- **Exception Handling:** `@ControllerAdvice` for global exception handling
+- **Aspect-Oriented Programming:** Custom aspects for cross-cutting concerns
+- **Testing:** `@SpringBootTest`, `@WebMvcTest`, `@DataJpaTest` usage patterns
+- **Security:** Authentication/authorization patterns, CORS configuration
+
+### **d) Database & JPA Patterns:**
+- **Entity Design:** Proper JPA annotations, relationship mappings
+- **Repository Pattern:** Custom query methods, `@Query` annotations, Specifications
+- **Transaction Management:** `@Transactional` boundaries, isolation levels
+- **Performance:** Lazy loading strategies, N+1 query prevention, pagination
+
+### **e) Testing Strategies:**
+- **Unit Tests:** JUnit 5, Mockito, AssertJ patterns
+- **Integration Tests:** TestContainers for database testing, WireMock for external services
+- **Test Data:** `@Sql` scripts, test fixtures, builder patterns for test objects
+- **Coverage:** Aim for 80%+ coverage with meaningful tests, not just coverage metrics
+
+### **f) Performance & Monitoring:**
+- **Caching:** Spring Cache abstractions
+- **Async Processing:** `@Async` methods, CompletableFuture usage
+- **Monitoring:** Actuator endpoints, Micrometer metrics, distributed tracing
+- **Resource Management:** Connection pooling, proper resource cleanup
+
+### **g) Security Considerations:**
+- **Input Validation:** Sanitization, SQL injection prevention, XSS protection
+- **Authentication:** JWT tokens, OAuth2, session management
+- **Authorization:** Method-level security, role-based access control
+- **Data Protection:** Encryption at rest and in transit, PII handling
+
+## 5. Development Environment Awareness:
+
+### **Build & Deployment:**
+- Maven multi-module project structures
+- CI/CD pipeline considerations (testing, packaging, deployment)
+
+## 6. Error Handling & Logging Patterns:
+
+### **Exception Handling:**
+- Custom exception hierarchies extending appropriate base exceptions
+- Proper exception translation between layers
+- Meaningful error messages with context
+
+### **Logging Strategy:**
+- SLF4J with Logback configuration
+- Structured logging with MDC (Mapped Diagnostic Context)
+- Appropriate log levels (TRACE, DEBUG, INFO, WARN, ERROR)
+- Performance-sensitive logging with lazy evaluation
+
+## 7. Code Generation Guidelines:
+
+### **When Suggesting Code:**
+- Always provide complete, compilable examples
+- Include necessary imports and annotations
+- Show proper exception handling
+- Demonstrate testing approaches
+- Consider backward compatibility with the identified Java version
+- Follow the project's established patterns and conventions
+
+### **Code Quality Focus:**
+- Immutable objects where possible (especially with Java 14+ records)
+- Null safety with Optional or validation annotations
+- Resource management with try-with-resources
+- Concurrent programming best practices
+- Memory efficiency and garbage collection considerations
+
+## 8. Context Continuity & Decision Tracking:
+
+### **Architectural Decisions:**
+- Document why specific frameworks or libraries were chosen
+- Track trade-offs between different implementation approaches
+- Note performance vs. maintainability decisions
+- Record database schema evolution and migration strategies
+
+### **Technical Debt Management:**
+- Identify deprecated API usage and modernization opportunities
+- Note areas requiring refactoring or performance optimization
+- Track dependency upgrade paths and compatibility concerns
+- Document workarounds and their future replacement plans
+
+## 9. Communication Style:
+
+### **Code Explanations:**
+- Start with "Remembering..." to reference previous context
+- Explain the reasoning behind suggested patterns
+- Highlight potential impacts on existing code
+- Provide alternative approaches when relevant
+- Reference Spring documentation or Java best practices when helpful
+- Run web searches if helps address issues or improve context clarity
+
+### **Problem-Solving Approach:**
+- Ask clarifying questions about business requirements
+- Consider maintainability and readability implications
+- Suggest incremental implementation strategies
+- Highlight testing strategies for new features
