@@ -2,6 +2,7 @@
 
 ## Playbook Documentation Standards
 
+{% raw %}
 ### Playbook Headers
 - Every playbook must start with a descriptive title explaining the change or issue being addressed
 - Use a brief title in the format "what & why", e.g. "Upgrade of vintegration-postilion service to v1.2.3 to apply fix for issue with broken connections"
@@ -489,3 +490,5 @@ Service names always start with 'v', and follow the pattern `{module-name}-{comp
 For all services which conform to this format, the service path is always `/srv/vsuite/{module-name}/{component-name}/`, e.g. "/srv/vsuite/vintegration/postilion/"
 Application configuration files and wrapper configs are always found in the `etc` directory under the service directory, e.g. "/srv/vsuite/vintegration/postilion/etc/application.properties"
 Remember this path notation for service backups, updating application properties and wrapper configurations.
+
+{% endraw %}
