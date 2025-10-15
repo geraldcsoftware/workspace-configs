@@ -1,3 +1,7 @@
 copilot-instructions.md.j2: .github/copilot-instructions.md
-mcp.json.j2: .vscode/mcp.json
+extensions.json.j2: .vscode/extensions.json
 memory.json.j2: .mcp/memory.json
+remember.prompt.md.j2: .github/prompts/remember.prompt.md
+create-specification.prompt.md.j2: .github/prompts/create-specification.prompt.md
+create-implementation-plan.prompt.md.j2: .github/prompts/create-implementation-plan.prompt.md
+review-and-refactor.prompt.md.j2: .github/prompts/review-and-refactor.prompt.md

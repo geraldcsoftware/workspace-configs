@@ -1,0 +1,18 @@
+---
+mode: agent
+description: This prompt is used to fix failing tests in a codebase.
+---
+
+You should have clear scope of the portion of the codebase whose tests are failing and needs fixing. Limit your changes to the scoped tests and if and only if its absolutely necessary, the code that the tests directly depend on. Avoid making unrelated changes to other parts of the codebase. Use maven commands `mvn ... test` with relevant test-scoping flags to run only the tests that are in scope.
+
+Your goal is to fix tests that have been broken by recent code changes. You should analyze the test failures, and identify where the tests are misaligned with the codebase they are testing. You should then update the tests to accurately reflect the current behavior of the codebase, ensuring that they validate the intended functionality.
+
+Key points to consider:
+- Evaluate whether each failing test is still relevant and necessary. If a test is no longer applicable due to changes in requirements or functionality, consider removing it.
+- For tests that are still relevant, update them to align with the current codebase.
+- Where there are gaps in test coverage and on critical paths, suggest adding new tests to cover these parts.
+- Should there be an obvious bug in the codebase, do not fix it immediately. Instead highlight the issue and your suggested fix in your response, with a brief explanation.
+- NEVER add tests for MVC concepts, Spring framework features, or any third party libraries. Only add tests for our own codebase. Mock external dependencies as needed.
+- Ensure that your changes maintain or improve the overall quality and reliability of the test suite.
+- After making changes, run the scoped test classes again to ensure that all tests pass and that no new issues have been introduced.
+- Your final summary should list tests fixed, obsolete tests removed, new test suggestions, and bugfix suggestions if any.
